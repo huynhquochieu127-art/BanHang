@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
@@ -73,18 +73,13 @@ namespace BanHang.Areas.Identity.Pages.Account
 
         public IActionResult OnGet(string code = null)
         {
-            if (code == null)
+            // Cho phép truy cập trực tiếp từ luồng OTP
+            Input = new InputModel
             {
-                return BadRequest("A code must be supplied for password reset.");
-            }
-            else
-            {
-                Input = new InputModel
-                {
-                    Code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code))
-                };
-                return Page();
-            }
+                Email = HttpContext.Session.GetString("ResetEmail") ?? "",
+                Code = "" // Người dùng sẽ nhập mã OTP vào trường này
+            };
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -97,13 +92,53 @@ namespace BanHang.Areas.Identity.Pages.Account
             var user = await _userManager.FindByEmailAsync(Input.Email);
             if (user == null)
             {
-                // Don't reveal that the user does not exist
-                return RedirectToPage("./ResetPasswordConfirmation");
+                ModelState.AddModelError(string.Empty, "Email không tồn tại trong hệ thống.");
+                return Page();
             }
 
-            var result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
+            // Kiểm tra OTP trong Session
+            string sessionEmail = HttpContext.Session.GetString("ResetEmail");
+            string sessionOtp = HttpContext.Session.GetString("ResetOtp");
+            string sessionExpiryStr = HttpContext.Session.GetString("ResetOtpExpiry");
+
+            if (string.IsNullOrEmpty(sessionEmail) || string.IsNullOrEmpty(sessionOtp) || string.IsNullOrEmpty(sessionExpiryStr))
+            {
+                ModelState.AddModelError(string.Empty, "Không tìm thấy phiên yêu cầu OTP hoặc mã OTP chưa được gửi.");
+                return Page();
+            }
+
+            if (!sessionEmail.Equals(Input.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(string.Empty, "Email không khớp với email đã nhận mã OTP.");
+                return Page();
+            }
+
+            if (sessionOtp != Input.Code.Trim())
+            {
+                ModelState.AddModelError(string.Empty, "Mã OTP không chính xác.");
+                return Page();
+            }
+
+            if (DateTime.TryParse(sessionExpiryStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime expiryTime))
+            {
+                if (DateTime.Now > expiryTime)
+                {
+                    ModelState.AddModelError(string.Empty, "Mã OTP đã hết hạn (hiệu lực 5 phút). Vui lòng gửi lại yêu cầu khôi phục.");
+                    return Page();
+                }
+            }
+
+            // Nếu mã OTP hợp lệ, tiến hành tạo token đặt lại mật khẩu và cập nhật mật khẩu
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, Input.Password);
+            
             if (result.Succeeded)
             {
+                // Xoá thông tin OTP trong Session
+                HttpContext.Session.Remove("ResetEmail");
+                HttpContext.Session.Remove("ResetOtp");
+                HttpContext.Session.Remove("ResetOtpExpiry");
+
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 

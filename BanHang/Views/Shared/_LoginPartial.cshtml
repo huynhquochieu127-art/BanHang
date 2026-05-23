@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @inject SignInManager<IdentityUser> SignInManager
 @inject UserManager<IdentityUser> UserManager
 <link rel="stylesheet" href="~/css/login_logout.css" asp-append-version="true" />
@@ -71,17 +71,17 @@
                  
                 </form>
 
-                <form asp-area="Identity" asp-page="/Account/Login" asp-page-handler="ExternalLogin"
-                      asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)" method="post">
-                    <div class="d-flex gap-2">
-                        <button type="submit" name="provider" value="Google" class="btn-social btn-google w-100">
+                <div class="d-flex gap-2">
+                    <form asp-area="Identity" asp-page="/Account/Login" asp-page-handler="ExternalLogin"
+                          asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)" method="post" class="w-50">
+                        <button type="submit" name="provider" value="Google" class="btn-social btn-google w-100" style="padding: 10px 0;">
                             <i class="fab fa-google"></i> Google
                         </button>
-                        <button type="submit" name="provider" value="Facebook" class="btn-social btn-facebook w-100">
-                            <i class="fab fa-facebook-f"></i> Facebook
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                    <a href="/Identity/Account/LoginWithPhone" class="btn-social btn-phone w-50 text-decoration-none d-flex align-items-center justify-content-center gap-2" style="color: #333; font-weight: 500; font-size: 14px; border: 1px solid #ddd; padding: 10px 0;">
+                        <i class="fas fa-phone-alt"></i> Điện thoại
+                    </a>
+                </div>
 
                 <div class="text-center small border-top pt-3">
                     <p class="mb-1">Khách hàng mới? <a asp-area="Identity" asp-page="/Account/Register" class="text-primary fw-bold text-decoration-none">Tạo tài khoản</a></p>

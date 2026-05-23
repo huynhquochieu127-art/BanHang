@@ -1,10 +1,11 @@
-﻿@page
+@page
 @model RegisterModel
 @{
     ViewData["Title"] = "Tạo tài khoản";
 }
 
 <link rel="stylesheet" href="~/css/login_logout.css" asp-append-version="true" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
 <div class="container py-5">
     <div class="row align-items-start">
@@ -14,56 +15,97 @@
                 <p class="text-muted fs-5">
                     Đăng ký tài khoản chỉ trong 1 phút để tích lũy điểm và nhận ưu đãi từ Hưng Hạnh.
                 </p>
-                <div class="title-underline"></div>
+                <div class="title-underline" style="width: 60px; height: 4px; background-color: #333; margin-top: 20px;"></div>
             </div>
         </div>
 
         <div class="col-md-7 ps-md-5 border-start">
-            <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="register-form">
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success text-center small mb-3 py-2" style="border-radius: 6px; border: 1px solid #c3e6cb; background-color: #d4edda; color: #155724; font-weight: 500;">
+                    <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+                </div>
+                <div class="alert alert-warning text-center small mb-3 py-2" style="border-radius: 6px; border: 1px solid #ffeeba; background-color: #fff3cd; color: #856404; font-size: 12px;">
+                    <i class="fas fa-info-circle"></i> Chạy thử nghiệm: Xem mã OTP đăng ký tại <strong>Console Log (Debug)</strong> hoặc hộp thư <strong>Gmail đăng ký</strong> của bạn!
+                </div>
+            }
 
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+            @* Form chính *@
+            <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="register-form">
+                
                 <div class="mb-3">
-                    <input asp-for="Input.Email" class="form-control custom-reg-input" placeholder="Email" />
+                    <input asp-for="Input.Email" class="form-control custom-reg-input" placeholder="Địa chỉ Email" readonly="@Model.OtpSent" required />
                     <span asp-validation-for="Input.Email" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
-                    <input asp-for="Input.Password" class="form-control custom-reg-input" placeholder="Mật khẩu" />
+                    <input asp-for="Input.PhoneNumber" class="form-control custom-reg-input" placeholder="Số điện thoại di động" readonly="@Model.OtpSent" required />
+                    <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <input asp-for="Input.Password" class="form-control custom-reg-input" type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" readonly="@Model.OtpSent" required />
                     <span asp-validation-for="Input.Password" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
-                    <input asp-for="Input.ConfirmPassword" class="form-control custom-reg-input" placeholder="Xác nhận mật khẩu" />
+                    <input asp-for="Input.ConfirmPassword" class="form-control custom-reg-input" type="password" placeholder="Xác nhận mật khẩu mới" readonly="@Model.OtpSent" required />
                     <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
                 </div>
 
-                <p class="recaptcha-text mb-4">
-                    Website được bảo vệ bởi reCAPTCHA và
-                    <a href="#">Chính sách bảo mật</a> và
-                    <a href="#">Điều khoản dịch vụ</a> của Google.
-                </p>
+                @if (Model.OtpSent)
+                {
+                    <hr class="my-4" />
+                    <div class="text-center mb-3">
+                        <span class="badge bg-primary text-uppercase px-3 py-2 mb-2" style="font-size: 12px; letter-spacing: 0.5px;">Nhập mã OTP để xác nhận</span>
+                    </div>
 
-                <button id="registerSubmit" type="submit" class="btn btn-dark btn-register w-100 mb-3">
-                    ĐĂNG KÝ
-                </button>
+                    <div class="mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0" style="border: 1.5px solid #ddd; border-right: none; border-radius: 4px 0 0 4px;"><i class="fas fa-key text-muted"></i></span>
+                            <input asp-for="Input.OtpCode" class="form-control custom-reg-input border-start-0" placeholder="Nhập 6 chữ số mã xác nhận" style="border-radius: 0 4px 4px 0; font-weight: bold; letter-spacing: 2px; text-align: center;" required autocomplete="off" />
+                        </div>
+                        <span asp-validation-for="Input.OtpCode" class="text-danger small"></span>
+                    </div>
+
+                    <button id="registerSubmit" type="submit" class="btn btn-dark btn-register w-100 mb-3" style="background-color: #2ecc71 !important; border: none !important;">
+                        XÁC NHẬN & ĐĂNG KÝ NGAY
+                    </button>
+                }
             </form>
 
-            <div class="social-login-area mt-3">
+            @if (!Model.OtpSent)
+            {
+                <form method="post" asp-page-handler="SendOtp" asp-route-returnUrl="@Model.ReturnUrl">
+                    @* Post values to handler for OTP generation *@
+                    <input type="hidden" id="hiddenEmail" name="Input.Email" />
+                    <input type="hidden" id="hiddenPhone" name="Input.PhoneNumber" />
+                    <input type="hidden" id="hiddenPass" name="Input.Password" />
+                    <input type="hidden" id="hiddenConfirmPass" name="Input.ConfirmPassword" />
 
+                    <button type="submit" onclick="syncFormValues()" class="btn btn-dark btn-register w-100 mb-3" style="background-color: #3498db !important; border: none !important;">
+                        TIẾP TỤC & GỬI MÃ OTP XÁC MINH
+                    </button>
+                </form>
+            }
+
+            <div class="social-login-area mt-3">
                 <div class="divider">
                     <span>HOẶC ĐĂNG KÝ VỚI</span>
                 </div>
 
-                <form asp-page-handler="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-                    <div class="d-flex gap-2 mb-4">
-                        <button type="submit" name="provider" value="Google" class="btn-social btn-google w-100">
+                <div class="d-flex gap-2 mb-4">
+                    <form asp-page-handler="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="w-50">
+                        <button type="submit" name="provider" value="Google" class="btn-social btn-google w-100" style="border-radius: 4px;">
                             <i class="fab fa-google"></i> Google
                         </button>
-                        <button type="submit" name="provider" value="Facebook" class="btn-social btn-facebook w-100">
-                            <i class="fab fa-facebook-f"></i> Facebook
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                    <a href="/Identity/Account/LoginWithPhone" class="btn-social btn-phone w-50 text-decoration-none d-flex align-items-center justify-content-center gap-2" style="border-radius: 4px; color: #333;">
+                        <i class="fas fa-phone-alt"></i> Điện thoại
+                    </a>
+                </div>
 
                 <a asp-area="" asp-controller="Home" asp-action="Index" class="text-dark small text-decoration-none d-block">
                     ← Quay lại trang chủ
@@ -75,4 +117,13 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        function syncFormValues() {
+            // Đồng bộ dữ liệu nhập từ form chính sang form ẩn để submit handler SendOtp
+            document.getElementById('hiddenEmail').value = document.querySelector('input[name="Input.Email"]').value;
+            document.getElementById('hiddenPhone').value = document.querySelector('input[name="Input.PhoneNumber"]').value;
+            document.getElementById('hiddenPass').value = document.querySelector('input[name="Input.Password"]').value;
+            document.getElementById('hiddenConfirmPass').value = document.querySelector('input[name="Input.ConfirmPassword"]').value;
+        }
+    </script>
 }

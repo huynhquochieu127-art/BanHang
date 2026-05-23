@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model LoginModel
 @{
     ViewData["Title"] = "ĐĂNG NHẬP";
@@ -36,23 +36,22 @@
             <span>HOẶC</span>
         </div>
 
-        <form asp-page-handler="ExternalLogin"
-              asp-route-returnUrl="@Model.ReturnUrl"
-              method="post">
-                    <div class="d-flex gap-2">
-                        <button type="submit" name="provider" value="Google" class="btn-social btn-google w-100">
-                            <i class="fab fa-google"></i> Google
-                        </button>
-                        <button type="submit" name="provider" value="Facebook" class="btn-social btn-facebook w-100">
-                            <i class="fab fa-facebook-f"></i> Facebook
-                        </button>
-                    </div>
-                </form>
+        <div class="d-flex gap-2">
+            <form asp-page-handler="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="w-50">
+                <button type="submit" name="provider" value="Google" class="btn-social btn-google w-100" style="border-radius: 4px;">
+                    <i class="fab fa-google"></i> Google
+                </button>
+            </form>
+            <a href="/Identity/Account/LoginWithPhone" class="btn-social btn-phone w-50 text-decoration-none d-flex align-items-center justify-content-center gap-2" style="border-radius: 4px; color: #333;">
+                <i class="fas fa-phone-alt"></i> Điện thoại
+            </a>
+        </div>
             
         
 
         <div class="login-footer mt-4 text-center">
             <p class="mb-1 text-muted">Khách hàng mới? <a asp-page="./Register" class="fw-bold text-dark">Tạo tài khoản</a></p>
+ 
             <p><a id="forgot-password" asp-page="./ForgotPassword" class="text-decoration-none">Quên mật khẩu?</a></p>
 
             <p class="recaptcha-notice mt-3">

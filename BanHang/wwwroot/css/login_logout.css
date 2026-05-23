@@ -1,4 +1,4 @@
-﻿/* Bao ngoài trang để tạo nền xám nhẹ và căn giữa */
+/* Bao ngoài trang để tạo nền xám nhẹ và căn giữa */
 .login-page-wrapper {
     min-height: 80vh;
     display: flex;
@@ -359,3 +359,9 @@
     .recaptcha-notice a {
         color: #999;
     }
+
+.btn-phone:hover {
+    background: #2ecc71;
+    color: white;
+    border-color: #2ecc71;
+}

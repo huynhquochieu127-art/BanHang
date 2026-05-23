@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
@@ -60,26 +60,36 @@ namespace BanHang.Areas.Identity.Pages.Account
 
             if (user == null)
             {
-                // Không báo lỗi để tránh lộ email tồn tại
-                return RedirectToPage("./ForgotPasswordConfirmation");
+                ModelState.AddModelError(string.Empty, "Email không tồn tại trong hệ thống.");
+                return Page();
             }
 
-            // ❗ Reset mật khẩu về 123456
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            // Tạo mã OTP ngẫu nhiên 6 chữ số
+            string otp = new Random().Next(100000, 999999).ToString();
 
-            var result = await _userManager.ResetPasswordAsync(user, token, "123456");
+            // Lưu thông tin vào Session để kiểm tra sau
+            HttpContext.Session.SetString("ResetEmail", Input.Email);
+            HttpContext.Session.SetString("ResetOtp", otp);
+            HttpContext.Session.SetString("ResetOtpExpiry", DateTime.Now.AddMinutes(5).ToString("o"));
 
-            if (result.Succeeded)
-            {
-                return RedirectToPage("./ForgotPasswordConfirmation");
-            }
+            // Gửi OTP qua email (Gmail)
+            string subject = "Mã OTP khôi phục mật khẩu - Shop Bán Hàng";
+            string message = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 8px;'>
+                    <h2 style='color: #222; text-align: center; border-bottom: 2px solid #222; padding-bottom: 10px;'>MÃ OTP KHÔI PHỤC MẬT KHẨU</h2>
+                    <p>Xin chào,</p>
+                    <p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản liên kết với email này. Vui lòng sử dụng mã OTP dưới đây để tiến hành đặt lại mật khẩu của bạn:</p>
+                    <div style='background: #f7f7f7; padding: 15px; border-radius: 6px; text-align: center; margin: 20px 0;'>
+                        <span style='font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #d9534f;'>{otp}</span>
+                    </div>
+                    <p style='color: #e74c3c; font-size: 13px; font-weight: bold;'>Mã OTP này có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
+                    <hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;'>
+                    <p style='font-size: 12px; color: #999; text-align: center;'>Đây là email tự động, vui lòng không phản hồi.<br><strong>Shop Bán Hàng</strong></p>
+                </div>";
 
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+            await _emailSender.SendEmailAsync(Input.Email, subject, message);
 
-            return Page();
+            return RedirectToPage("./ForgotPasswordConfirmation");
         }
     }
 }

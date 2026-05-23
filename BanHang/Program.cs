@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
+using System.Net.Mail;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,10 +48,10 @@ builder.Services
     .AddGoogle(options =>
     {
         options.ClientId =
-            builder.Configuration["Authentication:Google:ClientId"];
+            builder.Configuration["Authentication:Google:ClientId"] ?? "placeholder";
 
         options.ClientSecret =
-            builder.Configuration["Authentication:Google:ClientSecret"];
+            builder.Configuration["Authentication:Google:ClientSecret"] ?? "placeholder";
 
         options.CallbackPath = "/signin-google";
     });
@@ -264,11 +267,50 @@ app.Run();
 // ==========================
 public class EmailSender : IEmailSender
 {
-    public Task SendEmailAsync(
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<EmailSender> _logger;
+
+    public EmailSender(IConfiguration configuration, ILogger<EmailSender> logger)
+    {
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    public async Task SendEmailAsync(
         string email,
         string subject,
         string htmlMessage)
     {
-        return Task.CompletedTask;
+        try
+        {
+            var smtpServer = _configuration["EmailSettings:SmtpServer"] ?? "smtp.gmail.com";
+            var portStr = _configuration["EmailSettings:Port"] ?? "587";
+            int.TryParse(portStr, out int port);
+            if (port == 0) port = 587;
+            var senderEmail = _configuration["EmailSettings:SenderEmail"] ?? "your-gmail@gmail.com";
+            var senderPassword = _configuration["EmailSettings:SenderPassword"] ?? "password";
+
+            using (var message = new MailMessage())
+            {
+                message.From = new MailAddress(senderEmail, "Shop Bán Hàng");
+                message.To.Add(new MailAddress(email));
+                message.Subject = subject;
+                message.Body = htmlMessage;
+                message.IsBodyHtml = true;
+
+                using (var client = new SmtpClient(smtpServer, port))
+                {
+                    client.UseDefaultCredentials = false;
+                    client.Credentials = new NetworkCredential(senderEmail, senderPassword);
+                    client.EnableSsl = true;
+                    await client.SendMailAsync(message);
+                }
+            }
+            _logger.LogInformation($"Sent email to {email} successfully!");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error sending email to {email}: {ex.Message}");
+        }
     }
 }
